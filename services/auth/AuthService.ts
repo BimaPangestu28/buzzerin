@@ -1,4 +1,4 @@
-import { BaseApiService } from '../base/BaseApiService';
+import { BaseApiService } from "../base/BaseApiService";
 
 interface LoginCredentials {
   email: string;
@@ -16,16 +16,18 @@ interface LoginResponseData {
 }
 
 export class AuthService extends BaseApiService {
-  private readonly TOKEN_KEY = 'token';
-  
+  private readonly TOKEN_KEY = "auth_token";
+
   constructor() {
-    super('/auth');
+    super("/auth");
   }
 
-  async login(credentials: LoginCredentials): Promise<ApiResponse<LoginResponseData>> {
+  async login(
+    credentials: LoginCredentials
+  ): Promise<ApiResponse<LoginResponseData>> {
     try {
       const response = await this.http.post<ApiResponse<LoginResponseData>>(
-        this.getUrl('/login'),
+        this.getUrl("/login"),
         credentials
       );
 
@@ -36,26 +38,34 @@ export class AuthService extends BaseApiService {
       return response;
     } catch (error: any) {
       if (error.response?.status === 401) {
-        throw new Error('Invalid credentials');
+        throw new Error("Invalid credentials");
       }
       if (error.response?.status === 422) {
-        throw new Error('Invalid input data');
+        throw new Error("Invalid input data");
       }
-      throw new Error(error.message || 'Login failed');
+      throw new Error(error.message || "Login failed");
     }
   }
 
   async logout(): Promise<ApiResponse<null>> {
     try {
       const response = await this.http.post<ApiResponse<null>>(
-        this.getUrl('/logout'),
+        this.getUrl("/logout"),
         {}
       );
-      
+
       this.removeAuthToken();
       return response;
     } catch (error: any) {
-      throw new Error(error.message || 'Logout failed');
+      throw new Error(error.message || "Logout failed");
+    }
+  }
+
+  async verify(): Promise<ApiResponse<null>> {
+    try {
+      return await this.http.get<ApiResponse<null>>(this.getUrl("/verify"));
+    } catch (error: any) {
+      throw new Error(error.message || "Verification failed");
     }
   }
 
@@ -64,8 +74,8 @@ export class AuthService extends BaseApiService {
       localStorage.setItem(this.TOKEN_KEY, token);
       this.http.setAuthHeader(token);
     } catch (error) {
-      console.error('Failed to save auth token:', error);
-      throw new Error('Failed to save authentication token');
+      console.error("Failed to save auth token:", error);
+      throw new Error("Failed to save authentication token");
     }
   }
 
@@ -73,7 +83,7 @@ export class AuthService extends BaseApiService {
     try {
       return localStorage.getItem(this.TOKEN_KEY);
     } catch (error) {
-      console.error('Failed to get auth token:', error);
+      console.error("Failed to get auth token:", error);
       return null;
     }
   }
@@ -83,27 +93,26 @@ export class AuthService extends BaseApiService {
       localStorage.removeItem(this.TOKEN_KEY);
       this.http.removeAuthHeader();
     } catch (error) {
-      console.error('Failed to remove auth token:', error);
+      console.error("Failed to remove auth token:", error);
     }
   }
 
   isAuthenticated(): boolean {
     const token = this.getAuthToken();
     if (!token) return false;
-    
+
     try {
-      const tokenData = JSON.parse(atob(token.split('.')[1]));
+      const tokenData = JSON.parse(atob(token.split(".")[1]));
       return tokenData.exp * 1000 > Date.now();
     } catch {
       return false;
     }
   }
 
-  
   async refreshToken(): Promise<ApiResponse<LoginResponseData>> {
     try {
       const response = await this.http.post<ApiResponse<LoginResponseData>>(
-        this.getUrl('/refresh'),
+        this.getUrl("/refresh"),
         {}
       );
 
@@ -114,7 +123,7 @@ export class AuthService extends BaseApiService {
       return response;
     } catch (error: any) {
       this.removeAuthToken();
-      throw new Error(error.message || 'Token refresh failed');
+      throw new Error(error.message || "Token refresh failed");
     }
   }
 }

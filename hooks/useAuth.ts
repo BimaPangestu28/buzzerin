@@ -1,15 +1,26 @@
+// hooks/useAuth.ts
 "use client"
 
-import { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useCallback, useEffect } from "react"
 import type { UserData } from "@/types/auth.types"
 import { authService } from "@/services/auth/AuthService"
 
-export function useAuth() {
-  const router = useRouter()
+export const useAuth = () => {
   const [user, setUser] = useState<UserData | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+
+  // Initialize auth state
+  useEffect(() => {
+    const checkAuthStatus = () => {
+      const token = localStorage.getItem('auth_token')
+      setIsAuthenticated(!!token)
+      setLoading(false)
+    }
+
+    checkAuthStatus()
+  }, [])
 
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true)
@@ -18,7 +29,10 @@ export function useAuth() {
     try {
       const response = await authService.login({ email, password })
       
-      if (parseInt(response.status) === 200) {
+      if (response.status === 'success' && response.data.token) {
+        localStorage.setItem('auth_token', response.data.token)
+        setIsAuthenticated(true)
+        // Set user if API returns user data
         if (response.data.user) {
           setUser(response.data.user)
         }
@@ -38,32 +52,24 @@ export function useAuth() {
     setLoading(true)
     try {
       await authService.logout()
+      localStorage.removeItem('auth_token')
       setUser(null)
-      router.push('/login')
+      setIsAuthenticated(false)
+      // Use window.location for full page reload after logout
+      window.location.href = '/login'
     } catch (err: any) {
       setError(err.message || 'Logout failed')
     } finally {
       setLoading(false)
     }
-  }, [router])
-
-  const checkAuth = useCallback(async () => {
-    if (authService.isAuthenticated()) {
-      // Optional: Fetch user data here if needed
-      // const userData = await authService.getProfile()
-      // setUser(userData)
-      return true
-    }
-    return false
   }, [])
 
   return {
     user,
     loading,
     error,
+    isAuthenticated,
     login,
-    logout,
-    checkAuth,
-    isAuthenticated: authService.isAuthenticated()
+    logout
   }
 }

@@ -38,8 +38,9 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
     try {
       const response = await login(formData.email, formData.password);
-      if (parseInt(response.status) === 200) {
-        const { token } = response.data.data;
+      
+      if (response.status === 'success' && response.data.token) {
+        const { token } = response.data;
         authService.setAuthToken(token);
         onLoginSuccess?.(token);
       } else {
